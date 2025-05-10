@@ -45,34 +45,30 @@ async function main() {
 	for (const protoFile of protoFiles) {
 		console.log(chalk.cyan(`Generating TypeScript code for ${protoFile}...`))
 
-		// Build the protoc command with proper path handling for cross-platform
-		let protocCommand;
-		if (isWindows) {
-			// Windows-specific format as per ts-proto docs
-			protocCommand = [
-				protoc,
-				`--plugin=protoc-gen-ts_proto="${tsProtoPlugin}"`,
-				`--ts_proto_out="${TS_OUT_DIR}"`,
-				"--ts_proto_opt=outputServices=generic-definitions,env=node,esModuleInterop=true,useDate=false,useOptionals=messages",
-				`--proto_path="${SCRIPT_DIR}"`,
-				`"${path.join(SCRIPT_DIR, protoFile)}"`,
-			].join(" ")
-		} else {
-			protocCommand = [
-				protoc,
-				`--plugin=protoc-gen-ts_proto="${tsProtoPlugin}"`,
-				`--ts_proto_out="${TS_OUT_DIR}"`,
-				"--ts_proto_opt=outputServices=generic-definitions,env=node,esModuleInterop=true,useDate=false,useOptionals=messages",
-				`--proto_path="${SCRIPT_DIR}"`,
-				`"${path.join(SCRIPT_DIR, protoFile)}"`,
-			].join(" ")
-		}
-
 		try {
-			const execOptions = {
-				stdio: "inherit",
-			}
-			execSync(protocCommand, execOptions)
+			// Build the protoc command with proper path handling for cross-platform
+			if (isWindows) {
+				const npxCommand = `npx protoc --plugin=protoc-gen-ts_proto=.\\node_modules\\.bin\\protoc-gen-ts_proto.cmd --ts_proto_out=${TS_OUT_DIR} --ts_proto_opt=outputServices=generic-definitions,env=node,esModuleInterop=true,useDate=false,useOptionals=messages --proto_path=${SCRIPT_DIR} ${path.join(SCRIPT_DIR, protoFile)}`;
+				
+				console.log(chalk.cyan("Executing command:"), npxCommand);
+				execSync(npxCommand, { 
+					stdio: "inherit",
+					cwd: ROOT_DIR
+				});
+			} else {
+				const protocCommand = [
+					protoc,
+					`--plugin=protoc-gen-ts_proto="${tsProtoPlugin}"`,
+					`--ts_proto_out="${TS_OUT_DIR}"`,
+					"--ts_proto_opt=outputServices=generic-definitions,env=node,esModuleInterop=true,useDate=false,useOptionals=messages",
+					`--proto_path="${SCRIPT_DIR}"`,
+					`"${path.join(SCRIPT_DIR, protoFile)}"`,
+				].join(" ")
+				
+				try { 
+					execSync(protocCommand, { stdio: "inherit" });
+				} catch (error){}
+			} 
 		} catch (error) {
 			console.error(chalk.red(`Error generating TypeScript for ${protoFile}:`), error)
 			process.exit(1)
