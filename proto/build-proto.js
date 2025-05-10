@@ -6,16 +6,21 @@ import { fileURLToPath } from "url"
 import { execSync } from "child_process"
 import { globby } from "globby"
 import chalk from "chalk"
-
 import { createRequire } from "module"
-const require = createRequire(import.meta.url)
-const protoc = path.join(require.resolve("grpc-tools"), "../bin/protoc")
-const tsProtoPlugin = require.resolve("ts-proto/protoc-gen-ts_proto")
-
 // Get script directory and root directory
 const __filename = fileURLToPath(import.meta.url)
 const SCRIPT_DIR = path.dirname(__filename)
 const ROOT_DIR = path.resolve(SCRIPT_DIR, "..")
+
+// Path to ts-proto is different for Windows devs
+const require = createRequire(import.meta.url)
+const protoc = path.join(require.resolve("grpc-tools"), "../bin/protoc")
+// Handle Windows-specific path for ts-proto plugin
+const isWindows = process.platform === "win32"
+// Use the .bin directory path for Windows
+const tsProtoPlugin = isWindows
+    ? path.join(ROOT_DIR, "node_modules", ".bin", "protoc-gen-ts_proto.cmd")
+    : require.resolve("ts-proto/protoc-gen-ts_proto")
 
 async function main() {
 	console.log(chalk.bold.blue("Starting Protocol Buffer code generation..."))
@@ -41,14 +46,27 @@ async function main() {
 		console.log(chalk.cyan(`Generating TypeScript code for ${protoFile}...`))
 
 		// Build the protoc command with proper path handling for cross-platform
-		const protocCommand = [
-			protoc,
-			`--plugin=protoc-gen-ts_proto="${tsProtoPlugin}"`,
-			`--ts_proto_out="${TS_OUT_DIR}"`,
-			"--ts_proto_opt=outputServices=generic-definitions,env=node,esModuleInterop=true,useDate=false,useOptionals=messages",
-			`--proto_path="${SCRIPT_DIR}"`,
-			`"${path.join(SCRIPT_DIR, protoFile)}"`,
-		].join(" ")
+		let protocCommand;
+		if (isWindows) {
+			// Windows-specific format as per ts-proto docs
+			protocCommand = [
+				protoc,
+				`--plugin=protoc-gen-ts_proto="${tsProtoPlugin}"`,
+				`--ts_proto_out="${TS_OUT_DIR}"`,
+				"--ts_proto_opt=outputServices=generic-definitions,env=node,esModuleInterop=true,useDate=false,useOptionals=messages",
+				`--proto_path="${SCRIPT_DIR}"`,
+				`"${path.join(SCRIPT_DIR, protoFile)}"`,
+			].join(" ")
+		} else {
+			protocCommand = [
+				protoc,
+				`--plugin=protoc-gen-ts_proto="${tsProtoPlugin}"`,
+				`--ts_proto_out="${TS_OUT_DIR}"`,
+				"--ts_proto_opt=outputServices=generic-definitions,env=node,esModuleInterop=true,useDate=false,useOptionals=messages",
+				`--proto_path="${SCRIPT_DIR}"`,
+				`"${path.join(SCRIPT_DIR, protoFile)}"`,
+			].join(" ")
+		}
 
 		try {
 			const execOptions = {
