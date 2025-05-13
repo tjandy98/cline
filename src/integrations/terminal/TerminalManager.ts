@@ -198,6 +198,33 @@ export class TerminalManager {
 		if (availableTerminal) {
 			// Navigate back to the desired directory
 			await this.runCommand(availableTerminal, `cd "${cwd}"`)
+
+			// Wait for shell integration state to reflect the new directory
+			try {
+				await pWaitFor(
+					() => {
+						const currentCwd = availableTerminal.terminal.shellIntegration?.cwd?.fsPath
+						const targetCwd = vscode.Uri.file(cwd).fsPath
+
+						if (currentCwd) {
+							const pathsMatch = arePathsEqual(currentCwd, targetCwd)
+							if (pathsMatch) {
+							}
+							return pathsMatch
+						}
+						return false
+					},
+					{
+						timeout: 1000,
+						interval: 5,
+					},
+				)
+			} catch (err) {
+				console.warn(
+					`[TerminalManager] Timed out after 1 second waiting for shell integration to reflect the new directory`,
+				)
+			}
+
 			this.terminalIds.add(availableTerminal.id)
 			return availableTerminal
 		}
