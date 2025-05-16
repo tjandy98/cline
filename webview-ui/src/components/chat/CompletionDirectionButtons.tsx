@@ -2,6 +2,78 @@ import { useState, useRef, useEffect } from "react"
 import { CODE_BLOCK_BG_COLOR } from "@/components/common/CodeBlock"
 
 /**
+ * Custom CSS for tooltips applied directly in the component
+ * This ensures tooltips work in the VSCode webview context
+ */
+const tooltipStyles = `
+.tooltip {
+  position: relative;
+}
+
+.tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--vscode-editorWidget-background);
+  color: var(--vscode-foreground);
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  font-size: 12px;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  border: 1px solid var(--vscode-editorWidget-border);
+  z-index: 50;
+  margin-bottom: 8px;
+  max-width: 200px;
+  word-wrap: break-word;
+}
+
+.tooltip::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: var(--vscode-editorWidget-background) transparent transparent transparent;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  margin-bottom: -5px;
+  z-index: 51;
+}
+
+.tooltip:hover::after,
+.tooltip:hover::before {
+  opacity: 1;
+  visibility: visible;
+}
+
+.dropdown-tooltip::after {
+  left: 100%;
+  bottom: 50%;
+  transform: translateY(50%);
+  margin-left: 10px;
+  margin-bottom: 0;
+}
+
+.dropdown-tooltip::before {
+  left: 100%;
+  bottom: 50%;
+  transform: translateY(50%);
+  border-color: transparent var(--vscode-editorWidget-background) transparent transparent;
+  margin-left: -5px;
+  margin-bottom: 0;
+}
+`
+
+/**
  * Thresholds for responsive layouts (in pixels)
  * - Below NARROW_THRESHOLD: Icon-only mode (no labels)
  * - Between thresholds: Vertical layout (icons above text)
@@ -24,6 +96,26 @@ interface CompletionDirectionButtonsProps {
 }
 
 /**
+ * Direction button definition with its properties
+ */
+interface DirectionButton {
+	/** Unique identifier for the button */
+	id: string
+	/** Display text on the button */
+	label: string
+	/** Icon codicon class name */
+	icon: string
+	/** Position in the button row (1-based) */
+	position: number
+	/** Tooltip text displayed on hover */
+	tooltip: string
+	/** Whether this button requires custom options to function */
+	requiresOptions?: boolean
+	/** Whether this is the primary action button */
+	isPrimary?: boolean
+}
+
+/**
  * Custom option definition - can be extended in the future
  * to support user-defined custom actions
  */
@@ -34,23 +126,27 @@ interface CustomOption {
 	text: string
 	/** Optional prompt to send to the AI when selected */
 	prompt?: string
+	/** Optional tooltip text to display on hover */
+	tooltip?: string
 }
 
 /**
  * Button definitions with their properties
  */
-const DIRECTION_BUTTONS = [
+const DIRECTION_BUTTONS: DirectionButton[] = [
 	{
 		id: "review",
 		label: "Code Review",
 		icon: "codicon-checklist",
 		position: 1,
+		tooltip: "Review code changes made during the task for bugs or issues",
 	},
 	{
 		id: "document",
 		label: "Document",
 		icon: "codicon-book",
 		position: 2,
+		tooltip: "Generate documentation for code added during the task",
 	},
 	{
 		id: "custom",
@@ -58,6 +154,7 @@ const DIRECTION_BUTTONS = [
 		icon: "codicon-tools",
 		position: 3,
 		requiresOptions: true,
+		tooltip: "Choose from custom actions defined in settings",
 	},
 	{
 		id: "newTask",
@@ -65,6 +162,7 @@ const DIRECTION_BUTTONS = [
 		icon: "codicon-add",
 		position: 4,
 		isPrimary: true,
+		tooltip: "Start a new task with a clean context",
 	},
 ]
 
@@ -171,13 +269,20 @@ export const CompletionDirectionButtons: React.FC<CompletionDirectionButtonsProp
 		const sizeClasses = hideLabels ? "min-w-[42px] p-1.5" : "min-w-[80px]"
 
 		// Combine all classes
-		const buttonClasses = `${baseButtonClasses} ${colorClasses} ${hoverClasses} ${layoutClasses} ${sizeClasses}`
+		const buttonClasses = `tooltip ${baseButtonClasses} ${colorClasses} ${hoverClasses} ${layoutClasses} ${sizeClasses}`
 
 		// Icon margin classes based on layout
 		const iconClasses = `${button.icon} icon text-base ${horizontalLayout ? "mr-2 align-middle" : hideLabels ? "" : "mb-1"}`
 
 		return (
-			<button key={button.id} disabled={isDisabled} className={buttonClasses} onClick={() => handleButtonClick(button.id)}>
+			<button
+				key={button.id}
+				disabled={isDisabled}
+				className={`${buttonClasses} relative`}
+				onClick={() => handleButtonClick(button.id)}
+				title={button.tooltip}
+				aria-label={`${button.label}: ${button.tooltip}`}
+				data-tooltip={button.tooltip}>
 				<span className={`codicon ${iconClasses}`}></span>
 				<span
 					className={`label text-xs ${hideLabels ? "hidden" : horizontalLayout ? "inline-block align-middle" : "block"}`}>
@@ -186,6 +291,17 @@ export const CompletionDirectionButtons: React.FC<CompletionDirectionButtonsProp
 			</button>
 		)
 	}
+
+	// Apply CSS styles for tooltips
+	useEffect(() => {
+		const styleEl = document.createElement("style")
+		styleEl.innerHTML = tooltipStyles
+		document.head.appendChild(styleEl)
+
+		return () => {
+			document.head.removeChild(styleEl)
+		}
+	}, [])
 
 	return (
 		<div ref={containerRef} className="flex flex-row gap-2 w-full pt-2.5 px-0 mx-[15px]">
@@ -200,14 +316,20 @@ export const CompletionDirectionButtons: React.FC<CompletionDirectionButtonsProp
           bg-[var(--vscode-editor-background)]
           border border-[var(--vscode-editorWidget-border)]
           rounded overflow-hidden z-10 w-[200px] max-h-[300px] overflow-y-auto">
-					{customOptions.map((option) => (
-						<div
-							key={option.id}
-							className="p-3 cursor-pointer text-xs hover:bg-[var(--vscode-list-hoverBackground)]"
-							onClick={() => handleCustomOptionSelect(option)}>
-							{option.text}
-						</div>
-					))}
+					{customOptions.map((option) => {
+						const tooltipText = option.prompt || `Execute custom action: ${option.text}`
+						return (
+							<div
+								key={option.id}
+								className="p-3 cursor-pointer text-xs hover:bg-[var(--vscode-list-hoverBackground)] dropdown-tooltip tooltip"
+								onClick={() => handleCustomOptionSelect(option)}
+								title={tooltipText}
+								data-tooltip={tooltipText}
+								aria-label={tooltipText}>
+								{option.text}
+							</div>
+						)
+					})}
 				</div>
 			)}
 		</div>
