@@ -696,6 +696,50 @@ export class Task {
 		return false
 	}
 
+	async getDiffSinceLastCompletion(): Promise<string | undefined> {
+		if (!this.enableCheckpoints || !this.checkpointTracker) {
+			return undefined
+		}
+
+		const messageIndex = findLastIndex(
+			this.clineMessages,
+			(m) => m.say === "completion_result" || m.ask === "completion_result",
+		)
+		if (messageIndex === -1) return undefined // No completion message found
+
+		const currentCompletionMessage = this.clineMessages[messageIndex]
+		const currentCheckpointHash = currentCompletionMessage?.lastCheckpointHash
+		if (!currentCheckpointHash) return undefined
+
+		const previousCompletionMessage = findLast(
+			this.clineMessages.slice(0, messageIndex),
+			(m) => m.say === "completion_result" || m.ask === "completion_result",
+		)
+		const firstCheckpointMessage = this.clineMessages.find((m) => m.say === "checkpoint_created")
+
+		const previousCheckpointHash = previousCompletionMessage?.lastCheckpointHash || firstCheckpointMessage?.lastCheckpointHash
+
+		if (!previousCheckpointHash) return undefined
+
+		try {
+			const changedFiles = await this.checkpointTracker.getDiffSet(previousCheckpointHash, currentCheckpointHash)
+			if (!changedFiles || changedFiles.length === 0) {
+				return undefined
+			}
+
+			return changedFiles
+				.map((file) => {
+					const header = `diff --git a/${file.relativePath} b/${file.relativePath}\n--- a/${file.relativePath}\n+++ b/${file.relativePath}\n`
+					const fileDiff = _generateDiffText(file.before ?? "", file.after ?? "")
+					return header + fileDiff
+				})
+				.join("\n\n")
+		} catch (error) {
+			console.error("Error getting diff set in getDiffSinceLastCompletion:", error)
+			return undefined
+		}
+	}
+
 	// Communicate with webview
 
 	// partial has three valid states true (partial message), false (completion of partial message), undefined (individual complete message)
@@ -4381,4 +4425,29 @@ export class Task {
 
 		return `<environment_details>\n${details.trim()}\n</environment_details>`
 	}
+}
+
+// Helper function to generate a simple diff text (moved from reviewCode.ts)
+function _generateDiffText(before: string, after: string): string {
+	const beforeLines = before.split("\n")
+	const afterLines = after.split("\n")
+
+	// Simple line-by-line diff (not a sophisticated diff algorithm)
+	let result = ""
+
+	// Add removed lines
+	for (const line of beforeLines) {
+		if (!afterLines.includes(line)) {
+			result += `- ${line}\n`
+		}
+	}
+
+	// Add added lines
+	for (const line of afterLines) {
+		if (!beforeLines.includes(line)) {
+			result += `+ ${line}\n`
+		}
+	}
+
+	return result.length > 0 ? result : "// No visible changes (might be whitespace only)"
 }

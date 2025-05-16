@@ -24,30 +24,36 @@ export const reviewCode: TaskMethodHandler = async (controller: Controller, _req
 		return -1
 	}
 
-	// Notify user that we're analyzing code changes
-	await controller.task.say("text", "Analyzing code changes since last completion...")
-
 	try {
 		// Check if there are changes to review using the public API
 		if (await controller.task.doesLatestTaskCompletionHaveNewChanges()) {
-			// The AI will show the changes since the last completion
-			// Since we don't want to implement our own diff system,
-			// just provide instructions to analyze the code
+			// First display the diff to the user in the VSCode UI
+			const messageTs = Date.now()
+			await controller.task.presentMultifileDiff(messageTs, true)
 
-			// Create prompt for code review
+			// Get the actual diff content
+			const diffContent = await controller.task.getDiffSinceLastCompletion()
+
+			// Notify user of what we're doing
+			await controller.task.say("text", "Reviewing code changes...")
+
+			// Construct the review prompt, including the diff if available
 			const reviewPrompt =
-				`Review the code changes shown above that were made since the last completion.\n\n` +
+				`Analyzing code changes since last completion...\n\n` +
+				(diffContent
+					? `The following code changes were made:\n\`\`\`diff\n${diffContent}\n\`\`\`\n\n`
+					: `No textual diff to show, but changes were detected. Please analyze the current state of the relevant files.\n\n`) +
+				`Review the code changes.\n\n` +
 				`Focus on:\n` +
 				`1. Potential bugs or logic errors\n` +
 				`2. Type safety issues\n` +
 				`3. Missing error handling\n` +
 				`4. Performance concerns\n` +
 				`5. Security vulnerabilities\n\n` +
-				`Reference other code files as needed for context.`
+				`Reference other code files as needed for context, using the read_file tool or targeted grep commands.`
 
-			// Notify user about the code review and send the review prompt
-			await controller.task.say("text", "Reviewing code changes...")
-			await controller.task.say("text", reviewPrompt)
+			// Start a new task with the review prompt
+			await controller.initTask(reviewPrompt, [])
 		} else {
 			await controller.task.say("text", "No significant changes found to review.")
 			return Empty.create()
