@@ -1140,8 +1140,8 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 								display: "flex",
 								padding: `${primaryButtonText || secondaryButtonText || isStreaming ? "10" : "0"}px 15px 0px 15px`,
 							}}>
-							{/* Show our new direction buttons for completion_result, otherwise show the regular primary button */}
-							{clineAsk === "completion_result" ? (
+							{/* Show our new direction buttons for completion_result or resume_completed_task, otherwise show the regular primary button */}
+							{clineAsk === "completion_result" || clineAsk === "resume_completed_task" ? (
 								<CompletionDirectionButtons
 									disabled={!enableButtons}
 									onOptionSelected={(optionId, customPrompt) =>
