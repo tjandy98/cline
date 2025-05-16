@@ -21,19 +21,20 @@ const ButtonContainer = styled.div`
 	flex-direction: row;
 	gap: 8px;
 	width: 100%;
-	padding: 10px 15px 0px 15px;
+	padding: 10px 0px 0px 0px; // Remove horizontal padding to span full width
+	margin: 0 15px; // Add margin instead to keep the same spacing
 `
 
 // Style for the direction buttons - same color as background with icons
-const DirectionButton = styled.button<{ disabled?: boolean }>`
+const DirectionButton = styled.button<{ disabled?: boolean; isPrimary?: boolean }>`
 	height: 48px; // Double height
 	flex: 1;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
 	align-items: center;
-	background-color: ${CODE_BLOCK_BG_COLOR};
-	color: var(--vscode-input-foreground);
+	background-color: ${(props) => (props.isPrimary ? "var(--vscode-button-background)" : CODE_BLOCK_BG_COLOR)};
+	color: ${(props) => (props.isPrimary ? "var(--vscode-button-foreground)" : "var(--vscode-input-foreground)")};
 	border: 1px solid var(--vscode-editorGroup-border);
 	border-radius: 3px;
 	cursor: ${(props) => (props.disabled ? "default" : "pointer")};
@@ -42,7 +43,8 @@ const DirectionButton = styled.button<{ disabled?: boolean }>`
 	opacity: ${(props) => (props.disabled ? "0.5" : "1")};
 
 	&:hover {
-		background-color: var(--vscode-list-hoverBackground);
+		background-color: ${(props) =>
+			props.isPrimary ? "var(--vscode-button-hoverBackground)" : "var(--vscode-list-hoverBackground)"};
 	}
 
 	.icon {
@@ -106,11 +108,6 @@ export const CompletionDirectionButtons: React.FC<CompletionDirectionButtonsProp
 
 	return (
 		<ButtonContainer>
-			<DirectionButton disabled={disabled} onClick={handleNewTaskClick}>
-				<span className="codicon codicon-add icon"></span>
-				<span className="label">New Task</span>
-			</DirectionButton>
-
 			<DirectionButton disabled={disabled} onClick={handleReviewClick}>
 				<span className="codicon codicon-checklist icon"></span>
 				<span className="label">Code Review</span>
@@ -124,6 +121,12 @@ export const CompletionDirectionButtons: React.FC<CompletionDirectionButtonsProp
 			<DirectionButton disabled={disabled || customOptions.length === 0} onClick={handleCustomClick}>
 				<span className="codicon codicon-tools icon"></span>
 				<span className="label">Custom</span>
+			</DirectionButton>
+
+			{/* New Task button moved to the right and styled as primary */}
+			<DirectionButton disabled={disabled} isPrimary={true} onClick={handleNewTaskClick}>
+				<span className="codicon codicon-add icon"></span>
+				<span className="label">New Task</span>
 			</DirectionButton>
 
 			{showCustomOptions && (
