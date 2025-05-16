@@ -24,57 +24,66 @@ export const reviewCode: TaskMethodHandler = async (controller: Controller, _req
 		return -1
 	}
 
-	// Get the most recent completion checkpoint hash
-	const lastCompletionIndex = findLastIndex(
-		controller.task.clineMessages,
-		(m: ClineMessage) => m.say === "completion_result" || m.ask === "completion_result",
-	)
-
-	if (lastCompletionIndex < 0) {
-		throw new Error("No completion found")
-	}
-
-	const lastCompletionMessage = controller.task.clineMessages[lastCompletionIndex]
-
-	// Find previous completion checkpoint
-	const prevCompletionIndex = findLastIndex(
-		controller.task.clineMessages.slice(0, lastCompletionIndex),
-		(m: ClineMessage) => m.say === "completion_result" || m.ask === "completion_result",
-	)
-
-	const prevCheckpointHash =
-		prevCompletionIndex >= 0
-			? controller.task.clineMessages[prevCompletionIndex].lastCheckpointHash
-			: controller.task.clineMessages.find((m) => m.say === "checkpoint_created")?.lastCheckpointHash
-
-	if (!lastCompletionMessage.lastCheckpointHash || !prevCheckpointHash) {
-		throw new Error("Checkpoint information not available")
-	}
-
-	// For implementation purposes, we'll need to access checkpoint data
-	// In a real implementation, this would call the proper public method on the task
+	// Notify user that we're analyzing code changes
 	await controller.task.say("text", "Analyzing code changes since last completion...")
 
-	// Notify user about the code review
-	await controller.task.say("text", "Reviewing code changes...")
+	try {
+		// Check if there are changes to review using the public API
+		if (await controller.task.doesLatestTaskCompletionHaveNewChanges()) {
+			// The AI will show the changes since the last completion
+			// Since we don't want to implement our own diff system,
+			// just provide instructions to analyze the code
 
-	// This is a placeholder prompt - in the real implementation, this would include
-	// actual diff content from the checkpoint system
-	const reviewPrompt = `
-        Review the code changes that were made since the last completion.
-        
-        Focus on:
-        1. Potential bugs or logic errors
-        2. Type safety issues
-        3. Missing error handling
-        4. Performance concerns
-        5. Security vulnerabilities
-        
-        Reference other code files as needed for context.
-    `.trim()
+			// Create prompt for code review
+			const reviewPrompt =
+				`Review the code changes shown above that were made since the last completion.\n\n` +
+				`Focus on:\n` +
+				`1. Potential bugs or logic errors\n` +
+				`2. Type safety issues\n` +
+				`3. Missing error handling\n` +
+				`4. Performance concerns\n` +
+				`5. Security vulnerabilities\n\n` +
+				`Reference other code files as needed for context.`
 
-	// Use the say method to deliver the prompt to the LLM
-	await controller.task.say("text", reviewPrompt)
+			// Notify user about the code review and send the review prompt
+			await controller.task.say("text", "Reviewing code changes...")
+			await controller.task.say("text", reviewPrompt)
+		} else {
+			await controller.task.say("text", "No significant changes found to review.")
+			return Empty.create()
+		}
+	} catch (error) {
+		console.error("Error getting diff between checkpoints:", error)
+		await controller.task.say(
+			"text",
+			`Error analyzing code changes: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	}
+
+	// Helper function to generate a simple diff text
+	function generateDiffText(before: string, after: string): string {
+		const beforeLines = before.split("\n")
+		const afterLines = after.split("\n")
+
+		// Simple line-by-line diff (not a sophisticated diff algorithm)
+		let result = ""
+
+		// Add removed lines
+		for (const line of beforeLines) {
+			if (!afterLines.includes(line)) {
+				result += `- ${line}\n`
+			}
+		}
+
+		// Add added lines
+		for (const line of afterLines) {
+			if (!beforeLines.includes(line)) {
+				result += `+ ${line}\n`
+			}
+		}
+
+		return result.length > 0 ? result : "// No visible changes (might be whitespace only)"
+	}
 
 	return Empty.create()
 }

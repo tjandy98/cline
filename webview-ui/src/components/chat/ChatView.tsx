@@ -549,30 +549,41 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 					break
 				case "completion_result":
 				case "resume_completed_task":
-					// Handle the different direction buttons
-					if (optionId === "review") {
-						// Call the reviewCode method
-						await TaskServiceClient.reviewCode({}).catch((err) => console.error("Error reviewing code:", err))
-						setSendingDisabled(true)
-					} else if (optionId === "document") {
-						// Call the documentCode method
-						await TaskServiceClient.documentCode({}).catch((err) => console.error("Error documenting code:", err))
-						setSendingDisabled(true)
-					} else if (optionId?.startsWith("custom_")) {
-						// Call the executeCustomDirection method with the custom prompt
-						if (customPrompt) {
-							await TaskServiceClient.executeCustomDirection({
-								value: customPrompt,
-							}).catch((err) => console.error("Error with custom direction:", err))
-							setSendingDisabled(true)
+					// First, send a yesButtonClicked response to close the current ask promise
+					vscode.postMessage({
+						type: "askResponse",
+						askResponse: "yesButtonClicked",
+					})
+
+					// Then after a short delay, call the appropriate handler
+					setTimeout(async () => {
+						if (optionId === "review") {
+							// Call the reviewCode method
+							await TaskServiceClient.reviewCode({}).catch((err) => console.error("Error reviewing code:", err))
+						} else if (optionId === "document") {
+							// Call the documentCode method
+							await TaskServiceClient.documentCode({}).catch((err) => console.error("Error documenting code:", err))
+						} else if (optionId?.startsWith("custom_")) {
+							// Call the executeCustomDirection method with the custom prompt
+							if (customPrompt) {
+								await TaskServiceClient.executeCustomDirection({
+									value: customPrompt,
+								}).catch((err) => console.error("Error with custom direction:", err))
+							} else {
+								// Fallback to starting a new task if no custom prompt is provided
+								startNewTask()
+							}
 						} else {
-							// Fallback to starting a new task if no custom prompt is provided
+							// Default behavior - start new task (original functionality)
 							startNewTask()
 						}
-					} else {
-						// Default behavior - start new task (original functionality)
-						startNewTask()
-					}
+					}, 100)
+
+					// Clean up state immediately
+					setInputValue("")
+					setActiveQuote(null)
+					setSelectedImages([])
+					setSendingDisabled(true)
 					break
 				case "new_task":
 					console.info("new task button clicked!", { lastMessage, messages, clineAsk, text })

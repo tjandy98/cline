@@ -3,9 +3,9 @@ import { Empty, StringRequest } from "../../../shared/proto/common"
 import { TaskMethodHandler } from "./index"
 
 /**
- * Executes a custom direction prompt after task completion
+ * Executes a custom direction prompt provided by the user
  * @param controller The controller instance
- * @param request The request containing the custom prompt
+ * @param request The StringRequest containing the custom prompt
  * @returns Empty response
  */
 export const executeCustomDirection: TaskMethodHandler = async (
@@ -17,13 +17,13 @@ export const executeCustomDirection: TaskMethodHandler = async (
 	}
 
 	if (!request.value) {
-		throw new Error("Custom prompt is required")
+		throw new Error("Custom direction prompt is required")
 	}
 
-	// Notify user about the custom direction
-	await controller.task.say("text", "Executing custom direction...")
+	// Notify user that we're processing their custom direction
+	await controller.task.say("text", "Processing custom direction...")
 
-	// Use the custom prompt directly
+	// Send the custom prompt to the AI
 	await controller.task.say("text", request.value)
 
 	return Empty.create()
