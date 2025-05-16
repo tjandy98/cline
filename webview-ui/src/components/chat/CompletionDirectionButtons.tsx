@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import styled from "styled-components"
 import { CODE_BLOCK_BG_COLOR } from "@/components/common/CodeBlock"
 
@@ -15,6 +15,10 @@ interface CustomOption {
 	prompt?: string
 }
 
+// Width thresholds for responsive layouts
+const NARROW_THRESHOLD = 345 // px - below this width, show icons only (no labels)
+const WIDE_THRESHOLD = 700 // px - above this width, show icons beside text (horizontal layout)
+
 // Button container with horizontal layout (single row)
 const ButtonContainer = styled.div`
 	display: flex;
@@ -25,12 +29,17 @@ const ButtonContainer = styled.div`
 	margin: 0 15px; // Add margin instead to keep the same spacing
 `
 
-// Style for the direction buttons - same color as background with icons
-const DirectionButton = styled.button<{ disabled?: boolean; isPrimary?: boolean }>`
-	height: 48px; // Double height
+// Style for the direction buttons with responsive layout
+const DirectionButton = styled.button<{
+	disabled?: boolean
+	isPrimary?: boolean
+	hideLabels?: boolean
+	horizontalLayout?: boolean
+}>`
+	height: ${(props) => (props.horizontalLayout ? "36px" : "48px")}; // Shorter height for horizontal layout
 	flex: 1;
 	display: flex;
-	flex-direction: column;
+	flex-direction: ${(props) => (props.horizontalLayout ? "row" : "column")};
 	justify-content: center;
 	align-items: center;
 	background-color: ${(props) => (props.isPrimary ? "var(--vscode-button-background)" : CODE_BLOCK_BG_COLOR)};
@@ -39,8 +48,13 @@ const DirectionButton = styled.button<{ disabled?: boolean; isPrimary?: boolean 
 	border-radius: 3px;
 	cursor: ${(props) => (props.disabled ? "default" : "pointer")};
 	white-space: normal; // Allow text to wrap inside button
-	padding: 6px 12px;
+	padding: ${(props) => {
+		if (props.hideLabels) return "6px 6px"
+		if (props.horizontalLayout) return "6px 12px"
+		return "6px 12px"
+	}};
 	opacity: ${(props) => (props.disabled ? "0.5" : "1")};
+	min-width: ${(props) => (props.hideLabels ? "42px" : "80px")};
 
 	&:hover {
 		background-color: ${(props) =>
@@ -49,11 +63,13 @@ const DirectionButton = styled.button<{ disabled?: boolean; isPrimary?: boolean 
 
 	.icon {
 		font-size: 16px;
-		margin-bottom: 4px;
+		margin-right: ${(props) => (props.horizontalLayout ? "8px" : "0")};
+		margin-bottom: ${(props) => (props.horizontalLayout ? "0" : props.hideLabels ? "0" : "4px")};
 	}
 
 	.label {
 		font-size: 12px;
+		display: ${(props) => (props.hideLabels ? "none" : "block")};
 	}
 `
 
@@ -85,12 +101,38 @@ const CustomOptionItem = styled.div`
 
 export const CompletionDirectionButtons: React.FC<CompletionDirectionButtonsProps> = ({ onOptionSelected, disabled = false }) => {
 	const [showCustomOptions, setShowCustomOptions] = useState(false)
+	const [hideLabels, setHideLabels] = useState(false)
+	const [horizontalLayout, setHorizontalLayout] = useState(false)
+	const containerRef = useRef<HTMLDivElement>(null)
 
 	// Hardcoded placeholder custom options
 	const customOptions: CustomOption[] = [
 		{ id: "custom_1", text: "Generate Tests", prompt: "Generate unit tests for the code you just wrote" },
 		{ id: "custom_2", text: "Explain Code", prompt: "Provide a detailed explanation of how the code works" },
 	]
+
+	// Set up ResizeObserver to detect container width and adjust layout
+	useEffect(() => {
+		if (!containerRef.current) return
+
+		// Create a new ResizeObserver
+		const observer = new ResizeObserver((entries) => {
+			for (const entry of entries) {
+				const width = entry.contentRect.width
+				// Update layout based on width thresholds
+				setHideLabels(width < NARROW_THRESHOLD)
+				setHorizontalLayout(width > WIDE_THRESHOLD)
+			}
+		})
+
+		// Start observing the container
+		observer.observe(containerRef.current)
+
+		// Stop observing when component unmounts
+		return () => {
+			observer.disconnect()
+		}
+	}, [])
 
 	const handleCustomClick = () => {
 		setShowCustomOptions(!showCustomOptions)
@@ -107,24 +149,41 @@ export const CompletionDirectionButtons: React.FC<CompletionDirectionButtonsProp
 	const handleNewTaskClick = () => onOptionSelected("newTask")
 
 	return (
-		<ButtonContainer>
-			<DirectionButton disabled={disabled} onClick={handleReviewClick}>
+		<ButtonContainer ref={containerRef}>
+			<DirectionButton
+				disabled={disabled}
+				hideLabels={hideLabels}
+				horizontalLayout={horizontalLayout}
+				onClick={handleReviewClick}>
 				<span className="codicon codicon-checklist icon"></span>
 				<span className="label">Code Review</span>
 			</DirectionButton>
 
-			<DirectionButton disabled={disabled} onClick={handleDocumentClick}>
+			<DirectionButton
+				disabled={disabled}
+				hideLabels={hideLabels}
+				horizontalLayout={horizontalLayout}
+				onClick={handleDocumentClick}>
 				<span className="codicon codicon-book icon"></span>
 				<span className="label">Document</span>
 			</DirectionButton>
 
-			<DirectionButton disabled={disabled || customOptions.length === 0} onClick={handleCustomClick}>
+			<DirectionButton
+				disabled={disabled || customOptions.length === 0}
+				hideLabels={hideLabels}
+				horizontalLayout={horizontalLayout}
+				onClick={handleCustomClick}>
 				<span className="codicon codicon-tools icon"></span>
 				<span className="label">Custom</span>
 			</DirectionButton>
 
 			{/* New Task button moved to the right and styled as primary */}
-			<DirectionButton disabled={disabled} isPrimary={true} onClick={handleNewTaskClick}>
+			<DirectionButton
+				disabled={disabled}
+				hideLabels={hideLabels}
+				horizontalLayout={horizontalLayout}
+				isPrimary={true}
+				onClick={handleNewTaskClick}>
 				<span className="codicon codicon-add icon"></span>
 				<span className="label">New Task</span>
 			</DirectionButton>
