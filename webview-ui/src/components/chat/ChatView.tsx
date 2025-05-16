@@ -25,6 +25,7 @@ import Announcement from "@/components/chat/Announcement"
 import BrowserSessionRow from "@/components/chat/BrowserSessionRow"
 import ChatRow from "@/components/chat/ChatRow"
 import ChatTextArea from "@/components/chat/ChatTextArea"
+import { CompletionDirectionButtons } from "@/components/chat/CompletionDirectionButtons"
 import QuotedMessagePreview from "@/components/chat/QuotedMessagePreview"
 import TaskHeader from "@/components/chat/TaskHeader"
 import TelemetryBanner from "@/components/common/TelemetryBanner"
@@ -312,10 +313,13 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 							setSecondaryButtonText("Reject")
 							break
 						case "completion_result":
-							// extension waiting for feedback. but we can just present a new task button
+							// extension waiting for feedback. Now we present multiple direction buttons
 							setSendingDisabled(isPartial)
 							setClineAsk("completion_result")
 							setEnableButtons(!isPartial)
+
+							// We still set these for backward compatibility, but they won't be shown
+							// when our new direction buttons are rendered
 							setPrimaryButtonText("Start New Task")
 							setSecondaryButtonText(undefined)
 							break
@@ -515,7 +519,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 	This logic depends on the useEffect[messages] above to set clineAsk, after which buttons are shown and we then send an askResponse to the extension.
 	*/
 	const handlePrimaryButtonClick = useCallback(
-		async (text?: string, images?: string[]) => {
+		async (text?: string, images?: string[], optionId?: string, customPrompt?: string) => {
 			const trimmedInput = text?.trim()
 			switch (clineAsk) {
 				case "api_req_failed":
@@ -545,8 +549,23 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 					break
 				case "completion_result":
 				case "resume_completed_task":
-					// extension waiting for feedback. but we can just present a new task button
-					startNewTask()
+					// Check if this is a direction button click with a specific direction
+					if (optionId === "review") {
+						// For now, just log (we'll implement the actual functionality later)
+						console.log("Review code option selected")
+						startNewTask()
+					} else if (optionId === "document") {
+						// For now, just log (we'll implement the actual functionality later)
+						console.log("Document code option selected")
+						startNewTask()
+					} else if (optionId?.startsWith("custom_")) {
+						// For now, just log custom options (we'll implement the actual functionality later)
+						console.log("Custom option selected:", optionId, "with prompt:", customPrompt)
+						startNewTask()
+					} else {
+						// Default behavior - start new task (original functionality)
+						startNewTask()
+					}
 					break
 				case "new_task":
 					console.info("new task button clicked!", { lastMessage, messages, clineAsk, text })
@@ -1121,17 +1140,28 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 								display: "flex",
 								padding: `${primaryButtonText || secondaryButtonText || isStreaming ? "10" : "0"}px 15px 0px 15px`,
 							}}>
-							{primaryButtonText && !isStreaming && (
-								<VSCodeButton
-									appearance="primary"
+							{/* Show our new direction buttons for completion_result, otherwise show the regular primary button */}
+							{clineAsk === "completion_result" ? (
+								<CompletionDirectionButtons
 									disabled={!enableButtons}
-									style={{
-										flex: secondaryButtonText ? 1 : 2,
-										marginRight: secondaryButtonText ? "6px" : "0",
-									}}
-									onClick={() => handlePrimaryButtonClick(inputValue, selectedImages)}>
-									{primaryButtonText}
-								</VSCodeButton>
+									onOptionSelected={(optionId, customPrompt) =>
+										handlePrimaryButtonClick(inputValue, selectedImages, optionId, customPrompt)
+									}
+								/>
+							) : (
+								primaryButtonText &&
+								!isStreaming && (
+									<VSCodeButton
+										appearance="primary"
+										disabled={!enableButtons}
+										style={{
+											flex: secondaryButtonText ? 1 : 2,
+											marginRight: secondaryButtonText ? "6px" : "0",
+										}}
+										onClick={() => handlePrimaryButtonClick(inputValue, selectedImages)}>
+										{primaryButtonText}
+									</VSCodeButton>
+								)
 							)}
 							{(secondaryButtonText || isStreaming) && (
 								<VSCodeButton
