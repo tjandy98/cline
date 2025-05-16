@@ -31,6 +31,12 @@ service TaskService {
   rpc taskFeedback(StringRequest) returns (Empty);
   // Shows task completion changes diff in a view
   rpc taskCompletionViewChanges(Int64Request) returns (Empty);
+  // Review code changes since last completion
+  rpc reviewCode(EmptyRequest) returns (Empty);
+  // Document code changes since last completion
+  rpc documentCode(EmptyRequest) returns (Empty);
+  // Execute custom direction prompt
+  rpc executeCustomDirection(CustomDirectionRequest) returns (Empty);
 }
 
 // Request message for creating a new task
@@ -45,6 +51,12 @@ message TaskFavoriteRequest {
   Metadata metadata = 1;
   string task_id = 2;
   bool is_favorited = 3;
+}
+
+// Request for custom direction
+message CustomDirectionRequest {
+  Metadata metadata = 1;
+  string custom_prompt = 2;
 }
 
 // Response for task details

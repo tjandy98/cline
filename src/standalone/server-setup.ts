@@ -70,6 +70,9 @@ import { getTaskHistory } from "../core/controller/task/getTaskHistory"
 import { askResponse } from "../core/controller/task/askResponse"
 import { taskFeedback } from "../core/controller/task/taskFeedback"
 import { taskCompletionViewChanges } from "../core/controller/task/taskCompletionViewChanges"
+import { reviewCode } from "../core/controller/task/reviewCode"
+import { documentCode } from "../core/controller/task/documentCode"
+import { executeCustomDirection } from "../core/controller/task/executeCustomDirection"
 
 // Web Service
 import { checkIsImageUrl } from "../core/controller/web/checkIsImageUrl"
@@ -165,6 +168,9 @@ export function addServices(
 		askResponse: wrapper(askResponse, controller),
 		taskFeedback: wrapper(taskFeedback, controller),
 		taskCompletionViewChanges: wrapper(taskCompletionViewChanges, controller),
+		reviewCode: wrapper(reviewCode, controller),
+		documentCode: wrapper(documentCode, controller),
+		executeCustomDirection: wrapper(executeCustomDirection, controller),
 	})
 
 	// Web Service

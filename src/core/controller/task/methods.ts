@@ -8,9 +8,12 @@ import { cancelTask } from "./cancelTask"
 import { clearTask } from "./clearTask"
 import { deleteNonFavoritedTasks } from "./deleteNonFavoritedTasks"
 import { deleteTasksWithIds } from "./deleteTasksWithIds"
+import { documentCode } from "./documentCode"
+import { executeCustomDirection } from "./executeCustomDirection"
 import { exportTaskWithId } from "./exportTaskWithId"
 import { getTaskHistory } from "./getTaskHistory"
 import { newTask } from "./newTask"
+import { reviewCode } from "./reviewCode"
 import { showTaskWithId } from "./showTaskWithId"
 import { taskCompletionViewChanges } from "./taskCompletionViewChanges"
 import { taskFeedback } from "./taskFeedback"
@@ -24,9 +27,12 @@ export function registerAllMethods(): void {
 	registerMethod("clearTask", clearTask)
 	registerMethod("deleteNonFavoritedTasks", deleteNonFavoritedTasks)
 	registerMethod("deleteTasksWithIds", deleteTasksWithIds)
+	registerMethod("documentCode", documentCode)
+	registerMethod("executeCustomDirection", executeCustomDirection)
 	registerMethod("exportTaskWithId", exportTaskWithId)
 	registerMethod("getTaskHistory", getTaskHistory)
 	registerMethod("newTask", newTask)
+	registerMethod("reviewCode", reviewCode)
 	registerMethod("showTaskWithId", showTaskWithId)
 	registerMethod("taskCompletionViewChanges", taskCompletionViewChanges)
 	registerMethod("taskFeedback", taskFeedback)

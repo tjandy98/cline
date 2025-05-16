@@ -24,6 +24,12 @@ export interface TaskFavoriteRequest {
 	isFavorited: boolean
 }
 
+/** Request for custom direction */
+export interface CustomDirectionRequest {
+	metadata?: Metadata | undefined
+	customPrompt: string
+}
+
 /** Response for task details */
 export interface TaskResponse {
 	id: string
@@ -263,6 +269,83 @@ export const TaskFavoriteRequest: MessageFns<TaskFavoriteRequest> = {
 			object.metadata !== undefined && object.metadata !== null ? Metadata.fromPartial(object.metadata) : undefined
 		message.taskId = object.taskId ?? ""
 		message.isFavorited = object.isFavorited ?? false
+		return message
+	},
+}
+
+function createBaseCustomDirectionRequest(): CustomDirectionRequest {
+	return { metadata: undefined, customPrompt: "" }
+}
+
+export const CustomDirectionRequest: MessageFns<CustomDirectionRequest> = {
+	encode(message: CustomDirectionRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+		if (message.metadata !== undefined) {
+			Metadata.encode(message.metadata, writer.uint32(10).fork()).join()
+		}
+		if (message.customPrompt !== "") {
+			writer.uint32(18).string(message.customPrompt)
+		}
+		return writer
+	},
+
+	decode(input: BinaryReader | Uint8Array, length?: number): CustomDirectionRequest {
+		const reader = input instanceof BinaryReader ? input : new BinaryReader(input)
+		let end = length === undefined ? reader.len : reader.pos + length
+		const message = createBaseCustomDirectionRequest()
+		while (reader.pos < end) {
+			const tag = reader.uint32()
+			switch (tag >>> 3) {
+				case 1: {
+					if (tag !== 10) {
+						break
+					}
+
+					message.metadata = Metadata.decode(reader, reader.uint32())
+					continue
+				}
+				case 2: {
+					if (tag !== 18) {
+						break
+					}
+
+					message.customPrompt = reader.string()
+					continue
+				}
+			}
+			if ((tag & 7) === 4 || tag === 0) {
+				break
+			}
+			reader.skip(tag & 7)
+		}
+		return message
+	},
+
+	fromJSON(object: any): CustomDirectionRequest {
+		return {
+			metadata: isSet(object.metadata) ? Metadata.fromJSON(object.metadata) : undefined,
+			customPrompt: isSet(object.customPrompt) ? globalThis.String(object.customPrompt) : "",
+		}
+	},
+
+	toJSON(message: CustomDirectionRequest): unknown {
+		const obj: any = {}
+		if (message.metadata !== undefined) {
+			obj.metadata = Metadata.toJSON(message.metadata)
+		}
+		if (message.customPrompt !== "") {
+			obj.customPrompt = message.customPrompt
+		}
+		return obj
+	},
+
+	create<I extends Exact<DeepPartial<CustomDirectionRequest>, I>>(base?: I): CustomDirectionRequest {
+		return CustomDirectionRequest.fromPartial(base ?? ({} as any))
+	},
+	fromPartial<I extends Exact<DeepPartial<CustomDirectionRequest>, I>>(object: I): CustomDirectionRequest {
+		const message = createBaseCustomDirectionRequest()
+		message.metadata =
+			object.metadata !== undefined && object.metadata !== null ? Metadata.fromPartial(object.metadata) : undefined
+		message.customPrompt = object.customPrompt ?? ""
 		return message
 	},
 }
@@ -1166,6 +1249,33 @@ export const TaskServiceDefinition = {
 			requestType: GetTaskHistoryRequest,
 			requestStream: false,
 			responseType: TaskHistoryArray,
+			responseStream: false,
+			options: {},
+		},
+		/** Review code changes since last completion */
+		reviewCode: {
+			name: "reviewCode",
+			requestType: EmptyRequest,
+			requestStream: false,
+			responseType: Empty,
+			responseStream: false,
+			options: {},
+		},
+		/** Document code changes since last completion */
+		documentCode: {
+			name: "documentCode",
+			requestType: EmptyRequest,
+			requestStream: false,
+			responseType: Empty,
+			responseStream: false,
+			options: {},
+		},
+		/** Execute custom direction prompt */
+		executeCustomDirection: {
+			name: "executeCustomDirection",
+			requestType: CustomDirectionRequest,
+			requestStream: false,
+			responseType: Empty,
 			responseStream: false,
 			options: {},
 		},

@@ -549,19 +549,26 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 					break
 				case "completion_result":
 				case "resume_completed_task":
-					// Check if this is a direction button click with a specific direction
+					// Handle the different direction buttons
 					if (optionId === "review") {
-						// For now, just log (we'll implement the actual functionality later)
-						console.log("Review code option selected")
-						startNewTask()
+						// Call the reviewCode method
+						await TaskServiceClient.reviewCode({}).catch((err) => console.error("Error reviewing code:", err))
+						setSendingDisabled(true)
 					} else if (optionId === "document") {
-						// For now, just log (we'll implement the actual functionality later)
-						console.log("Document code option selected")
-						startNewTask()
+						// Call the documentCode method
+						await TaskServiceClient.documentCode({}).catch((err) => console.error("Error documenting code:", err))
+						setSendingDisabled(true)
 					} else if (optionId?.startsWith("custom_")) {
-						// For now, just log custom options (we'll implement the actual functionality later)
-						console.log("Custom option selected:", optionId, "with prompt:", customPrompt)
-						startNewTask()
+						// Call the executeCustomDirection method with the custom prompt
+						if (customPrompt) {
+							await TaskServiceClient.executeCustomDirection({
+								value: customPrompt,
+							}).catch((err) => console.error("Error with custom direction:", err))
+							setSendingDisabled(true)
+						} else {
+							// Fallback to starting a new task if no custom prompt is provided
+							startNewTask()
+						}
 					} else {
 						// Default behavior - start new task (original functionality)
 						startNewTask()
