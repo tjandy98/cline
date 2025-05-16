@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react"
-import styled from "styled-components"
 import { CODE_BLOCK_BG_COLOR } from "@/components/common/CodeBlock"
 
 /**
@@ -36,120 +35,6 @@ interface CustomOption {
 	/** Optional prompt to send to the AI when selected */
 	prompt?: string
 }
-
-// Styled Components
-// -------------------------------------------------------------------------------
-
-/**
- * Container for all buttons - maintains a single row layout
- * that adapts to screen width
- */
-const ButtonContainer = styled.div`
-	display: flex;
-	flex-direction: row;
-	gap: 8px;
-	width: 100%;
-	padding: 10px 0px 0px 0px;
-	margin: 0 15px; /* Use margin instead of padding to allow buttons to span full width */
-`
-
-/**
- * Props for the DirectionButton styled component
- */
-interface DirectionButtonProps {
-	/** Whether the button is disabled */
-	disabled?: boolean
-	/** Whether this is the primary action button (blue) */
-	isPrimary?: boolean
-	/** Whether to hide text labels (icon-only mode) */
-	hideLabels?: boolean
-	/** Whether to use horizontal layout (icons beside text) */
-	horizontalLayout?: boolean
-}
-
-/**
- * Direction button with responsive layout capabilities
- * Adapts its appearance based on available space:
- * - Icon only on narrow screens
- * - Vertical layout (icon above text) on medium screens
- * - Horizontal layout (icon beside text) on wide screens
- */
-const DirectionButton = styled.button<DirectionButtonProps>`
-	/* Size and layout */
-	height: ${(props) => (props.horizontalLayout ? "36px" : "48px")};
-	flex: 1;
-	display: flex;
-	flex-direction: ${(props) => (props.horizontalLayout ? "row" : "column")};
-	justify-content: center;
-	align-items: center;
-	min-width: ${(props) => (props.hideLabels ? "42px" : "80px")};
-	padding: ${(props) => {
-		if (props.hideLabels) return "6px 6px"
-		if (props.horizontalLayout) return "6px 12px"
-		return "6px 12px"
-	}};
-
-	/* Appearance */
-	background-color: ${(props) => (props.isPrimary ? "var(--vscode-button-background)" : CODE_BLOCK_BG_COLOR)};
-	color: ${(props) => (props.isPrimary ? "var(--vscode-button-foreground)" : "var(--vscode-input-foreground)")};
-	border: 1px solid var(--vscode-editorGroup-border);
-	border-radius: 3px;
-	opacity: ${(props) => (props.disabled ? "0.5" : "1")};
-
-	/* Behavior */
-	cursor: ${(props) => (props.disabled ? "default" : "pointer")};
-	white-space: normal; /* Allow text to wrap inside button */
-
-	&:hover {
-		background-color: ${(props) =>
-			props.isPrimary ? "var(--vscode-button-hoverBackground)" : "var(--vscode-list-hoverBackground)"};
-	}
-
-	/* Icon styling */
-	.icon {
-		font-size: 16px;
-		margin-right: ${(props) => (props.horizontalLayout ? "8px" : "0")};
-		margin-bottom: ${(props) => (props.horizontalLayout ? "0" : props.hideLabels ? "0" : "4px")};
-	}
-
-	/* Label styling */
-	.label {
-		font-size: 12px;
-		display: ${(props) => (props.hideLabels ? "none" : "block")};
-	}
-`
-
-/**
- * Dropdown menu for custom options
- * Appears above the Custom button when clicked
- */
-const CustomOptionsMenu = styled.div`
-	position: absolute;
-	bottom: 100%;
-	right: 15px;
-	margin-bottom: 8px;
-	background-color: var(--vscode-editor-background);
-	border: 1px solid var(--vscode-editorWidget-border);
-	border-radius: 4px;
-	overflow: hidden;
-	z-index: 10;
-	width: 200px;
-	max-height: 300px;
-	overflow-y: auto;
-`
-
-/**
- * Individual item in the custom options dropdown
- */
-const CustomOptionItem = styled.div`
-	padding: 8px 12px;
-	cursor: pointer;
-	font-size: 12px;
-
-	&:hover {
-		background-color: var(--vscode-list-hoverBackground);
-	}
-`
 
 /**
  * Button definitions with their properties
@@ -257,36 +142,74 @@ export const CompletionDirectionButtons: React.FC<CompletionDirectionButtonsProp
 	const renderButton = (button: (typeof DIRECTION_BUTTONS)[0]) => {
 		const isCustom = button.id === "custom"
 		const customDisabled = isCustom && customOptions.length === 0
+		const isDisabled = disabled || customDisabled
+
+		// Base button classes that apply to all buttons
+		const baseButtonClasses = `
+      flex-1 rounded border border-[var(--vscode-editorGroup-border)] 
+      ${isDisabled ? "opacity-50 cursor-default" : "cursor-pointer"}
+    `
+
+		// Background and text color classes
+		const colorClasses = button.isPrimary
+			? "bg-[var(--vscode-button-background)] text-[var(--vscode-button-foreground)]"
+			: "bg-[var(--vscode-editor-background)] text-[var(--vscode-input-foreground)]"
+
+		// Hover effect classes
+		const hoverClasses = !isDisabled
+			? button.isPrimary
+				? "hover:bg-[var(--vscode-button-hoverBackground)]"
+				: "hover:bg-[var(--vscode-list-hoverBackground)]"
+			: ""
+
+		// Layout classes based on current view mode
+		const layoutClasses = horizontalLayout
+			? "h-9 flex flex-row justify-center items-center py-1.5 px-3 whitespace-nowrap"
+			: "h-12 flex flex-col justify-center items-center py-1.5 px-3"
+
+		// Additional size constraints
+		const sizeClasses = hideLabels ? "min-w-[42px] p-1.5" : "min-w-[80px]"
+
+		// Combine all classes
+		const buttonClasses = `${baseButtonClasses} ${colorClasses} ${hoverClasses} ${layoutClasses} ${sizeClasses}`
+
+		// Icon margin classes based on layout
+		const iconClasses = `${button.icon} icon text-base ${horizontalLayout ? "mr-2 align-middle" : hideLabels ? "" : "mb-1"}`
 
 		return (
-			<DirectionButton
-				key={button.id}
-				disabled={disabled || customDisabled}
-				hideLabels={hideLabels}
-				horizontalLayout={horizontalLayout}
-				isPrimary={button.isPrimary}
-				onClick={() => handleButtonClick(button.id)}>
-				<span className={`codicon ${button.icon} icon`}></span>
-				<span className="label">{button.label}</span>
-			</DirectionButton>
+			<button key={button.id} disabled={isDisabled} className={buttonClasses} onClick={() => handleButtonClick(button.id)}>
+				<span className={`codicon ${iconClasses}`}></span>
+				<span
+					className={`label text-xs ${hideLabels ? "hidden" : horizontalLayout ? "inline-block align-middle" : "block"}`}>
+					{button.label}
+				</span>
+			</button>
 		)
 	}
 
 	return (
-		<ButtonContainer ref={containerRef}>
+		<div ref={containerRef} className="flex flex-row gap-2 w-full pt-2.5 px-0 mx-[15px]">
 			{/* Render buttons in their defined order */}
 			{DIRECTION_BUTTONS.sort((a, b) => a.position - b.position).map(renderButton)}
 
 			{/* Custom options dropdown menu */}
 			{showCustomOptions && (
-				<CustomOptionsMenu>
+				<div
+					className="
+          absolute bottom-full right-[15px] mb-2
+          bg-[var(--vscode-editor-background)]
+          border border-[var(--vscode-editorWidget-border)]
+          rounded overflow-hidden z-10 w-[200px] max-h-[300px] overflow-y-auto">
 					{customOptions.map((option) => (
-						<CustomOptionItem key={option.id} onClick={() => handleCustomOptionSelect(option)}>
+						<div
+							key={option.id}
+							className="p-3 cursor-pointer text-xs hover:bg-[var(--vscode-list-hoverBackground)]"
+							onClick={() => handleCustomOptionSelect(option)}>
 							{option.text}
-						</CustomOptionItem>
+						</div>
 					))}
-				</CustomOptionsMenu>
+				</div>
 			)}
-		</ButtonContainer>
+		</div>
 	)
 }
