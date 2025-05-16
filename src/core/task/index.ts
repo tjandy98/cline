@@ -705,11 +705,15 @@ export class Task {
 			this.clineMessages,
 			(m) => m.say === "completion_result" || m.ask === "completion_result",
 		)
-		if (messageIndex === -1) return undefined // No completion message found
+		if (messageIndex === -1) {
+			return undefined
+		}
 
 		const currentCompletionMessage = this.clineMessages[messageIndex]
 		const currentCheckpointHash = currentCompletionMessage?.lastCheckpointHash
-		if (!currentCheckpointHash) return undefined
+		if (!currentCheckpointHash) {
+			return undefined
+		}
 
 		const previousCompletionMessage = findLast(
 			this.clineMessages.slice(0, messageIndex),
@@ -719,7 +723,9 @@ export class Task {
 
 		const previousCheckpointHash = previousCompletionMessage?.lastCheckpointHash || firstCheckpointMessage?.lastCheckpointHash
 
-		if (!previousCheckpointHash) return undefined
+		if (!previousCheckpointHash) {
+			return undefined
+		}
 
 		try {
 			const changedFiles = await this.checkpointTracker.getDiffSet(previousCheckpointHash, currentCheckpointHash)
