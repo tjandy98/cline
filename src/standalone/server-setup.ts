@@ -71,6 +71,9 @@ import { askResponse } from "../core/controller/task/askResponse"
 import { taskFeedback } from "../core/controller/task/taskFeedback"
 import { taskCompletionViewChanges } from "../core/controller/task/taskCompletionViewChanges"
 
+// Ui Service
+import { showChatView } from "../core/controller/ui/showChatView"
+
 // Web Service
 import { checkIsImageUrl } from "../core/controller/web/checkIsImageUrl"
 import { fetchOpenGraphData } from "../core/controller/web/fetchOpenGraphData"
@@ -165,6 +168,11 @@ export function addServices(
 		askResponse: wrapper(askResponse, controller),
 		taskFeedback: wrapper(taskFeedback, controller),
 		taskCompletionViewChanges: wrapper(taskCompletionViewChanges, controller),
+	})
+
+	// Ui Service
+	server.addService(proto.cline.UiService.service, {
+		showChatView: wrapper(showChatView, controller),
 	})
 
 	// Web Service

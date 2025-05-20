@@ -18,7 +18,7 @@ import { combineCommandSequences } from "@shared/combineCommandSequences"
 import { getApiMetrics } from "@shared/getApiMetrics"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { vscode } from "@/utils/vscode"
-import { TaskServiceClient, SlashServiceClient, FileServiceClient } from "@/services/grpc-client"
+import { TaskServiceClient, SlashServiceClient, FileServiceClient, UiServiceClient } from "@/services/grpc-client"
 import HistoryPreview from "@/components/history/HistoryPreview"
 import { normalizeApiConfiguration } from "@/components/settings/ApiOptions"
 import Announcement from "@/components/chat/Announcement"
@@ -659,7 +659,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 							textAreaRef.current?.focus()
 							if (isHidden) {
 								// Send message back to extension to show chat view
-								vscode.postMessage({ type: "showChatView" })
+								UiServiceClient.showChatView({}).catch((err) => console.error("Failed to show chat view:", err))
 							}
 							break
 					}

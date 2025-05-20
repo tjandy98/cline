@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package cline;
+option java_package = "bot.cline.proto";
+option java_multiple_files = true;
+
+import "common.proto";
+
+// Service for UI-related operations
+service UiService {
+  // Requests the extension to show the chat view
+  rpc showChatView(EmptyRequest) returns (Empty);
+}

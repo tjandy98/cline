@@ -17,7 +17,6 @@ export interface WebviewMessage {
 		| "didShowAnnouncement"
 		| "openInBrowser"
 		| "openMention"
-		| "showChatView"
 		| "refreshClineRules"
 		| "openMcpSettings"
 		| "autoApprovalSettings"
