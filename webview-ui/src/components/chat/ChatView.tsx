@@ -550,9 +550,8 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 				case "completion_result":
 				case "resume_completed_task":
 					// First, send a yesButtonClicked response to close the current ask promise
-					vscode.postMessage({
-						type: "askResponse",
-						askResponse: "yesButtonClicked",
+					await TaskServiceClient.askResponse({
+						responseType: "yesButtonClicked",
 					})
 
 					// Then after a short delay, call the appropriate handler

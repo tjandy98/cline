@@ -1252,33 +1252,6 @@ export const TaskServiceDefinition = {
 			responseStream: false,
 			options: {},
 		},
-		/** Review code changes since last completion */
-		reviewCode: {
-			name: "reviewCode",
-			requestType: EmptyRequest,
-			requestStream: false,
-			responseType: Empty,
-			responseStream: false,
-			options: {},
-		},
-		/** Document code changes since last completion */
-		documentCode: {
-			name: "documentCode",
-			requestType: EmptyRequest,
-			requestStream: false,
-			responseType: Empty,
-			responseStream: false,
-			options: {},
-		},
-		/** Execute custom direction prompt */
-		executeCustomDirection: {
-			name: "executeCustomDirection",
-			requestType: CustomDirectionRequest,
-			requestStream: false,
-			responseType: Empty,
-			responseStream: false,
-			options: {},
-		},
 		/** Sends a response to a previous ask operation */
 		askResponse: {
 			name: "askResponse",
@@ -1301,6 +1274,33 @@ export const TaskServiceDefinition = {
 		taskCompletionViewChanges: {
 			name: "taskCompletionViewChanges",
 			requestType: Int64Request,
+			requestStream: false,
+			responseType: Empty,
+			responseStream: false,
+			options: {},
+		},
+		/** Review code changes since last completion */
+		reviewCode: {
+			name: "reviewCode",
+			requestType: EmptyRequest,
+			requestStream: false,
+			responseType: Empty,
+			responseStream: false,
+			options: {},
+		},
+		/** Document code changes since last completion */
+		documentCode: {
+			name: "documentCode",
+			requestType: EmptyRequest,
+			requestStream: false,
+			responseType: Empty,
+			responseStream: false,
+			options: {},
+		},
+		/** Execute custom direction prompt */
+		executeCustomDirection: {
+			name: "executeCustomDirection",
+			requestType: CustomDirectionRequest,
 			requestStream: false,
 			responseType: Empty,
 			responseStream: false,
