@@ -21,6 +21,7 @@ export class WebviewProvider implements vscode.WebviewViewProvider {
 	private static activeInstances: Set<WebviewProvider> = new Set()
 	public view?: vscode.WebviewView | vscode.WebviewPanel
 	private disposables: vscode.Disposable[] = []
+	private webviewDisposables: vscode.Disposable[] = []
 	controller: Controller
 
 	constructor(
@@ -32,10 +33,26 @@ export class WebviewProvider implements vscode.WebviewViewProvider {
 		this.controller = new Controller(context, outputChannel, (message) => this.view?.webview.postMessage(message))
 	}
 
+	/**
+	 * Clears webview-specific resources without disposing the entire provider.
+	 * This is useful for sidebar views that can be reused.
+	 */
+	private clearWebviewResources() {
+		while (this.webviewDisposables.length) {
+			const x = this.webviewDisposables.pop()
+			if (x) {
+				x.dispose()
+			}
+		}
+	}
+
 	async dispose() {
 		if (this.view && "dispose" in this.view) {
 			this.view.dispose()
 		}
+
+		this.clearWebviewResources()
+
 		while (this.disposables.length) {
 			const x = this.disposables.pop()
 			if (x) {
@@ -95,39 +112,39 @@ export class WebviewProvider implements vscode.WebviewViewProvider {
 		if ("onDidChangeViewState" in webviewView) {
 			// WebviewView and WebviewPanel have all the same properties except for this visibility listener
 			// panel
-			webviewView.onDidChangeViewState(
-				() => {
-					if (this.view?.visible) {
-						this.controller.postMessageToWebview({
-							type: "action",
-							action: "didBecomeVisible",
-						})
-					}
-				},
-				null,
-				this.disposables,
-			)
+			const viewStateDisposable = webviewView.onDidChangeViewState(() => {
+				if (this.view?.visible) {
+					this.controller.postMessageToWebview({
+						type: "action",
+						action: "didBecomeVisible",
+					})
+				}
+			})
+			this.webviewDisposables.push(viewStateDisposable)
 		} else if ("onDidChangeVisibility" in webviewView) {
 			// sidebar
-			webviewView.onDidChangeVisibility(
-				() => {
-					if (this.view?.visible) {
-						this.controller.postMessageToWebview({
-							type: "action",
-							action: "didBecomeVisible",
-						})
-					}
-				},
-				null,
-				this.disposables,
-			)
+			const visibilityDisposable = webviewView.onDidChangeVisibility(() => {
+				if (this.view?.visible) {
+					this.controller.postMessageToWebview({
+						type: "action",
+						action: "didBecomeVisible",
+					})
+				}
+			})
+			this.webviewDisposables.push(visibilityDisposable)
 		}
 
 		// Listen for when the view is disposed
 		// This happens when the user closes the view or when the view is closed programmatically
 		webviewView.onDidDispose(
 			async () => {
-				await this.dispose()
+				if (this.view && "onDidChangeViewState" in this.view) {
+					// Tab panel is being closed, dispose the entire provider
+					await this.dispose()
+				} else {
+					// Sidebar view is being hidden, clear webview resources but preserve the provider for reuse
+					this.clearWebviewResources()
+				}
 			},
 			null,
 			this.disposables,
@@ -137,23 +154,20 @@ export class WebviewProvider implements vscode.WebviewViewProvider {
 		// this.clearTask()
 		{
 			// Listen for configuration changes
-			vscode.workspace.onDidChangeConfiguration(
-				async (e) => {
-					if (e && e.affectsConfiguration("workbench.colorTheme")) {
-						// Send theme update via gRPC subscription
-						const theme = await getTheme()
-						if (theme) {
-							await sendThemeEvent(JSON.stringify(theme))
-						}
+			const configDisposable = vscode.workspace.onDidChangeConfiguration(async (e) => {
+				if (e && e.affectsConfiguration("workbench.colorTheme")) {
+					// Send theme update via gRPC subscription
+					const theme = await getTheme()
+					if (theme) {
+						await sendThemeEvent(JSON.stringify(theme))
 					}
-					if (e && e.affectsConfiguration("cline.mcpMarketplace.enabled")) {
-						// Update state when marketplace tab setting changes
-						await this.controller.postStateToWebview()
-					}
-				},
-				null,
-				this.disposables,
-			)
+				}
+				if (e && e.affectsConfiguration("cline.mcpMarketplace.enabled")) {
+					// Update state when marketplace tab setting changes
+					await this.controller.postStateToWebview()
+				}
+			})
+			this.webviewDisposables.push(configDisposable)
 
 			// if the extension is starting a new session, clear previous task state
 			this.controller.clearTask()
@@ -391,12 +405,9 @@ export class WebviewProvider implements vscode.WebviewViewProvider {
 	 * @param webview The webview instance to attach the message listener to
 	 */
 	private setWebviewMessageListener(webview: vscode.Webview) {
-		webview.onDidReceiveMessage(
-			(message) => {
-				this.controller.handleWebviewMessage(message)
-			},
-			null,
-			this.disposables,
-		)
+		const messageDisposable = webview.onDidReceiveMessage((message) => {
+			this.controller.handleWebviewMessage(message)
+		})
+		this.webviewDisposables.push(messageDisposable)
 	}
 }
