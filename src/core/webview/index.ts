@@ -9,6 +9,7 @@ import { readFile } from "fs/promises"
 import path from "node:path"
 import { WebviewProviderType } from "@/shared/webview/types"
 import { sendThemeEvent } from "@core/controller/ui/subscribeToTheme"
+import { getRequestRegistry } from "@core/controller/grpc-handler"
 
 /*
 https://github.com/microsoft/vscode-webview-ui-toolkit-samples/blob/main/default/weather-webview/src/providers/WeatherViewProvider.ts
@@ -38,6 +39,9 @@ export class WebviewProvider implements vscode.WebviewViewProvider {
 	 * This is useful for sidebar views that can be reused.
 	 */
 	private clearWebviewResources() {
+		// Clean up any stale gRPC requests/subscriptions
+		getRequestRegistry().cleanupStaleRequests(0)
+
 		while (this.webviewDisposables.length) {
 			const x = this.webviewDisposables.pop()
 			if (x) {

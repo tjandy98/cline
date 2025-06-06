@@ -57,7 +57,6 @@ export class Controller {
 	readonly id: string = uuidv4()
 	private postMessage: (message: ExtensionMessage) => Thenable<boolean> | undefined
 
-	private disposables: vscode.Disposable[] = []
 	task?: Task
 	workspaceTracker: WorkspaceTracker
 	mcpHub: McpHub
@@ -100,12 +99,6 @@ export class Controller {
 	*/
 	async dispose() {
 		await this.clearTask()
-		while (this.disposables.length) {
-			const x = this.disposables.pop()
-			if (x) {
-				x.dispose()
-			}
-		}
 		this.workspaceTracker.dispose()
 		this.mcpHub.dispose()
 
