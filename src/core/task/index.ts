@@ -1234,23 +1234,47 @@ export class Task {
 				return
 			}
 
-			// For non-attempt completion we just say checkpoints
-			await this.say("checkpoint_created")
-			this.checkpointTracker?.commit().then(async (commitHash) => {
-				const lastCheckpointMessage = findLast(this.clineMessages, (m) => m.say === "checkpoint_created")
-				if (lastCheckpointMessage) {
-					lastCheckpointMessage.lastCheckpointHash = commitHash
-					await saveClineMessagesAndUpdateHistory(
-						this.getContext(),
+			// Initialize checkpoint tracker if it doesn't exist
+			if (!this.checkpointTracker && !this.checkpointTrackerErrorMessage) {
+				try {
+					this.checkpointTracker = await CheckpointTracker.create(
 						this.taskId,
-						this.clineMessages,
-						this.taskIsFavorited ?? false,
-						this.conversationHistoryDeletedRange,
-						this.checkpointTracker,
-						this.updateTaskHistory,
+						this.context.globalStorageUri.fsPath,
+						this.enableCheckpoints,
 					)
+				} catch (error) {
+					const errorMessage = error instanceof Error ? error.message : "Unknown error"
+					console.error("Failed to initialize checkpoint tracker:", errorMessage)
+					this.checkpointTrackerErrorMessage = errorMessage
+					await this.postStateToWebview()
+					return
 				}
-			}) // silently fails for now
+			}
+
+			// For non-attempt completion
+			if (this.checkpointTracker) {
+				try {
+					const commitHash = await this.checkpointTracker.commit()
+					if (commitHash) {
+						await this.say("checkpoint_created")
+						const lastCheckpointMessage = findLast(this.clineMessages, (m) => m.say === "checkpoint_created")
+						if (lastCheckpointMessage) {
+							lastCheckpointMessage.lastCheckpointHash = commitHash
+							await saveClineMessagesAndUpdateHistory(
+								this.getContext(),
+								this.taskId,
+								this.clineMessages,
+								this.taskIsFavorited ?? false,
+								this.conversationHistoryDeletedRange,
+								this.checkpointTracker,
+								this.updateTaskHistory,
+							)
+						}
+					}
+				} catch (error) {
+					console.error("Failed to create checkpoint:", error)
+				}
+			}
 
 			//
 		} else {
@@ -4414,8 +4438,8 @@ export class Task {
 		// Now, if it's the first request AND checkpoints are enabled AND tracker was successfully initialized,
 		// then say "checkpoint_created" and perform the commit.
 		if (isFirstRequest && this.enableCheckpoints && this.checkpointTracker) {
-			await this.say("checkpoint_created") // Now this is conditional
 			const commitHash = await this.checkpointTracker.commit() // Actual commit
+			await this.say("checkpoint_created")
 			const lastCheckpointMessage = findLast(this.clineMessages, (m) => m.say === "checkpoint_created")
 			if (lastCheckpointMessage) {
 				lastCheckpointMessage.lastCheckpointHash = commitHash
