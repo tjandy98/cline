@@ -55,11 +55,11 @@ const CreditsHistoryTable = ({ isLoading, usageData, paymentsData }: CreditsHist
 										{usageData.map((row, index) => (
 											<VSCodeDataGridRow key={index}>
 												<VSCodeDataGridCell grid-column="1">
-													{formatTimestamp(row.spentAt)}
+													{formatTimestamp(row.createdAt)}
 												</VSCodeDataGridCell>
-												<VSCodeDataGridCell grid-column="2">{`${row.modelProvider}/${row.model}`}</VSCodeDataGridCell>
+												<VSCodeDataGridCell grid-column="2">{`${row.aiInferenceProviderName}/${row.aiModelName}`}</VSCodeDataGridCell>
 												{/* <VSCodeDataGridCell grid-column="3">{`${row.promptTokens} → ${row.completionTokens}`}</VSCodeDataGridCell> */}
-												<VSCodeDataGridCell grid-column="3">{`$${Number(row.credits).toFixed(7)}`}</VSCodeDataGridCell>
+												<VSCodeDataGridCell grid-column="3">{`$${Number(row.creditsUsed).toFixed(7)}`}</VSCodeDataGridCell>
 											</VSCodeDataGridRow>
 										))}
 									</VSCodeDataGrid>

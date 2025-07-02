@@ -1,18 +1,36 @@
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios"
-import type { BalanceResponse, PaymentTransaction, UsageTransaction } from "@shared/ClineAccount"
-import { ExtensionMessage } from "@shared/ExtensionMessage"
+import type { BalanceResponse, PaymentTransaction, UsageTransaction, UserResponse } from "@shared/ClineAccount"
+import { AuthService } from "../auth/AuthService"
 
 export class ClineAccountService {
-	private readonly baseUrl = "https://api.cline.bot/v1"
-	private postMessageToWebview: (message: ExtensionMessage) => Promise<void>
-	private getClineApiKey: () => Promise<string | undefined>
+	private static instance: ClineAccountService
+	private _authService: AuthService
+	// private readonly _authServiceUrl = "https://staging-app.cline.bot/auth"
+	// private readonly _baseUrl = "https://app.cline.bot/v1"
+	// TODO: replace this with a global API Host
+	private readonly _baseUrl = "https://core-api.staging.int.cline.bot"
 
-	constructor(
-		postMessageToWebview: (message: ExtensionMessage) => Promise<void>,
-		getClineApiKey: () => Promise<string | undefined>,
-	) {
-		this.postMessageToWebview = postMessageToWebview
-		this.getClineApiKey = getClineApiKey
+	constructor() {
+		this._authService = AuthService.getInstance()
+	}
+
+	/**
+	 * Returns the singleton instance of ClineAccountService
+	 * @returns Singleton instance of ClineAccountService
+	 */
+	public static getInstance(): ClineAccountService {
+		if (!ClineAccountService.instance) {
+			ClineAccountService.instance = new ClineAccountService()
+		}
+		return ClineAccountService.instance
+	}
+
+	/**
+	 * Returns the base URL for the Cline API
+	 * @returns The base URL as a string
+	 */
+	get baseUrl(): string {
+		return this._baseUrl
 	}
 
 	/**
@@ -23,29 +41,32 @@ export class ClineAccountService {
 	 * @throws Error if the API key is not found or the request fails
 	 */
 	private async authenticatedRequest<T>(endpoint: string, config: AxiosRequestConfig = {}): Promise<T> {
-		const clineApiKey = await this.getClineApiKey()
+		const url = `${this._baseUrl}${endpoint}`
 
-		if (!clineApiKey) {
-			throw new Error("Cline API key not found")
-		}
+		const clineAccountAuthToken = await this._authService.getAuthToken()
 
-		const url = `${this.baseUrl}${endpoint}`
 		const requestConfig: AxiosRequestConfig = {
 			...config,
 			headers: {
-				Authorization: `Bearer ${clineApiKey}`,
+				Authorization: `Bearer ${clineAccountAuthToken}`,
 				"Content-Type": "application/json",
 				...config.headers,
 			},
 		}
 
-		const response: AxiosResponse<T> = await axios.get(url, requestConfig)
-
-		if (!response.data) {
+		const response: AxiosResponse<{ data?: T; error: string; success: boolean }> = await axios.get(url, requestConfig)
+		const status = response.status
+		if (status < 200 || status >= 300) {
+			throw new Error(`Request to ${endpoint} failed with status ${status}`)
+		}
+		if (!response.data || !response.data.data) {
 			throw new Error(`Invalid response from ${endpoint} API`)
 		}
+		if (!response.data.success) {
+			throw new Error(`API error: ${response.data.error}`)
+		}
 
-		return response.data
+		return response.data.data
 	}
 
 	/**
@@ -54,7 +75,8 @@ export class ClineAccountService {
 	 */
 	async fetchBalanceRPC(): Promise<BalanceResponse | undefined> {
 		try {
-			const data = await this.authenticatedRequest<BalanceResponse>("/user/credits/balance")
+			const me = await this.authenticatedRequest<UserResponse>(`/api/v1/users/me`)
+			const data = await this.authenticatedRequest<BalanceResponse>(`/api/v1/users/${me.id}/balance`)
 			return data
 		} catch (error) {
 			console.error("Failed to fetch balance (RPC):", error)
@@ -68,8 +90,9 @@ export class ClineAccountService {
 	 */
 	async fetchUsageTransactionsRPC(): Promise<UsageTransaction[] | undefined> {
 		try {
-			const data = await this.authenticatedRequest<{ usageTransactions: UsageTransaction[] }>("/user/credits/usage")
-			return data.usageTransactions
+			const me = await this.authenticatedRequest<UserResponse>(`/api/v1/users/me`)
+			const data = await this.authenticatedRequest<{ items: UsageTransaction[] }>(`/api/v1/users/${me.id}/usages`)
+			return data.items
 		} catch (error) {
 			console.error("Failed to fetch usage transactions (RPC):", error)
 			return undefined
@@ -82,7 +105,10 @@ export class ClineAccountService {
 	 */
 	async fetchPaymentTransactionsRPC(): Promise<PaymentTransaction[] | undefined> {
 		try {
-			const data = await this.authenticatedRequest<{ paymentTransactions: PaymentTransaction[] }>("/user/credits/payments")
+			const me = await this.authenticatedRequest<UserResponse>(`/api/v1/users/me`)
+			const data = await this.authenticatedRequest<{ paymentTransactions: PaymentTransaction[] }>(
+				`/api/v1/users/${me.id}/payments`,
+			)
 			return data.paymentTransactions
 		} catch (error) {
 			console.error("Failed to fetch payment transactions (RPC):", error)
