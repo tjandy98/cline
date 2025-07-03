@@ -87,6 +87,17 @@ export class Controller {
 		cleanupLegacyCheckpoints(this.context.globalStorageUri.fsPath, this.outputChannel).catch((error) => {
 			console.error("Failed to cleanup legacy checkpoints:", error)
 		})
+
+		// Load the saved mode
+		this.loadSavedMode()
+	}
+
+	private async loadSavedMode() {
+		const savedMode = (await getGlobalState(this.context, "mode")) as "plan" | "act" | undefined
+		if (savedMode) {
+			this.mode = savedMode
+			this.outputChannel.appendLine(`Loaded saved mode: ${savedMode}`)
+		}
 	}
 
 	/*
@@ -238,8 +249,9 @@ export class Controller {
 	async togglePlanActModeWithChatSettings(chatSettings: ChatSettings, chatContent?: ChatContent): Promise<boolean> {
 		const didSwitchToActMode = chatSettings.mode === "act"
 
-		// Store mode in-memory only
+		// Store mode in-memory and persist to global state
 		this.mode = chatSettings.mode
+		await updateGlobalState(this.context, "mode", this.mode)
 
 		// Capture mode switch telemetry | Capture regardless of if we know the taskId
 		telemetryService.captureModeSwitch(this.task?.taskId ?? "0", chatSettings.mode)
