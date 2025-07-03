@@ -95,10 +95,15 @@ export class Controller {
 	}
 
 	private async loadSavedMode() {
-		const savedMode = (await getGlobalState(this.context, "mode")) as "plan" | "act" | undefined
-		if (savedMode) {
-			this.mode = savedMode
-			this.outputChannel.appendLine(`Loaded saved mode: ${savedMode}`)
+		try {
+			const savedMode = (await getGlobalState(this.context, "mode")) as "plan" | "act" | undefined
+			if (savedMode) {
+				this.mode = savedMode
+				this.outputChannel.appendLine(`Loaded saved mode: ${savedMode}`)
+			}
+		} catch (error) {
+			this.outputChannel.appendLine(`Failed to load saved mode: ${error}`)
+			this.mode = "plan" // Default mode
 		}
 	}
 
