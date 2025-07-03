@@ -89,7 +89,9 @@ export class Controller {
 		})
 
 		// Load the saved mode
-		this.loadSavedMode()
+		this.loadSavedMode().catch((error) => {
+			console.error("Failed to load saved mode:", error)
+		})
 	}
 
 	private async loadSavedMode() {
