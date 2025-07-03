@@ -391,7 +391,6 @@ vscode.env.openExternal = async (uri) => {
 	return true
 }
 
-// Extend Uri object with improved implementations
 Object.assign(vscode.Uri, {
 	parse: (uriString) => {
 		const url = new URL(uriString)
@@ -500,13 +499,6 @@ Object.assign(vscode.workspace, {
 
 	// Add workspace folder configuration
 	rootPath: process.cwd(),
-	workspaceFolders: [
-		{
-			uri: vscode.Uri.file(process.cwd()),
-			name: path.basename(process.cwd()),
-			index: 0,
-		},
-	],
 	name: path.basename(process.cwd()),
 	workspaceFile: vscode.Uri.file(path.join(process.cwd(), ".vscode", "workspace.json")),
 
@@ -827,8 +819,6 @@ Object.assign(vscode.languages, {
 	}),
 })
 
-console.log("Finished loading stub impls...")
-
 // Export the terminal manager globally for Cline core to use
 global.standaloneTerminalManager = globalTerminalManager
 
@@ -839,3 +829,5 @@ if (typeof global !== "undefined") {
 }
 
 module.exports = vscode
+
+console.log("Finished loading stub impls...")
