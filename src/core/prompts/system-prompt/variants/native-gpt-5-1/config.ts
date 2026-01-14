@@ -48,14 +48,13 @@ export const config = createVariant(ModelFamily.NATIVE_GPT_5_1)
 		SystemPromptSection.SYSTEM_INFO,
 		SystemPromptSection.OBJECTIVE,
 		SystemPromptSection.USER_INSTRUCTIONS,
+		SystemPromptSection.SKILLS,
 	)
 	.tools(
 		ClineDefaultTool.BASH,
 		ClineDefaultTool.FILE_READ,
 		// Should disable FILE_NEW and FILE_EDIT when enabled
-		// ClineDefaultTool.APPLY_PATCH,
-		ClineDefaultTool.FILE_NEW,
-		ClineDefaultTool.FILE_EDIT,
+		ClineDefaultTool.APPLY_PATCH,
 		ClineDefaultTool.SEARCH,
 		ClineDefaultTool.LIST_FILES,
 		ClineDefaultTool.LIST_CODE_DEF,
@@ -71,6 +70,7 @@ export const config = createVariant(ModelFamily.NATIVE_GPT_5_1)
 		ClineDefaultTool.MCP_DOCS,
 		ClineDefaultTool.TODO,
 		ClineDefaultTool.GENERATE_EXPLANATION,
+		ClineDefaultTool.USE_SKILL,
 	)
 	.placeholders({
 		MODEL_FAMILY: ModelFamily.NATIVE_GPT_5_1,
